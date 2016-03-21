@@ -14,13 +14,13 @@ var MB_OK = 0;
 
 var ret = ostypes.API('MessageBox')(ostypes.TYPE.HWND(0), "Hello world", "title", MB_OK);
 
-function jsCallback(lpParameter, TimerOrWaitFired) {
+var jsCallback = function(lpParameter, TimerOrWaitFired) {
   self.postMessage('lpParameter: ' + lpParameter);
   self.PostMessage('TimerOrWaitFired: ' + TimerOrWaitFired);
   return undefined;
 }
-cCallback = ostypes.TYPE.WAITORTIMERCALLBACK.ptr(jsCallback);
-var mynumber = ctypes.uint32_t(7);
+var cCallback = ostypes.TYPE.WAITORTIMERCALLBACK.ptr(jsCallback);
+
 var hNewTimer = ostypes.TYPE.HANDLE(0);
 ret = ostypes.API('CreateTimerQueueTimer')(
   hNewTimer.address(),
