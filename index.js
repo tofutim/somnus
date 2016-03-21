@@ -1,9 +1,11 @@
 var self = require("sdk/self");
+var {ChromeWorker} = require("chrome");
 
-// a dummy function, to show how tests work.
-// to see how to test this function, look at test/test-index.js
-function dummy(text, callback) {
-  callback(text);
-}
+var workerUrl = self.data.url("worker.js");
+console.log("workerUrl: " + workerUrl);
 
-exports.dummy = dummy;
+var worker = new ChromeWorker(workerUrl);
+worker.onmessage = function(e) {
+  console.log(e.data);
+};
+worker.postMessage("Tim");
