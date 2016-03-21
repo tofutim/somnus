@@ -1,0 +1,3 @@
+[submodule "ostypes"]
+	path = ostypes
+	url = git@github.com:Noitidart/ostypes
