@@ -1,3 +1,6 @@
 [submodule "modules/ostypes"]
 	path = modules/ostypes
 	url = git@github.com:loqu8/ostypes.git
+[submodule "data/ostypes"]
+	path = data/ostypes
+	url = git@github.com:loqu8/ostypes.git
