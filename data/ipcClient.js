@@ -111,7 +111,8 @@ IpcClient.prototype = {
     var res = null;
     do {
 //        self.postMessage('sleepEx (' + SLEEPEXPERIOD + ' msec)');
-        var res = ostypes.API('SleepEx')(
+        var res = ostypes.API('WaitForSingleObjectEx')(
+            this.pipeHandle,
             SLEEPEXPERIOD,
             true
         );
