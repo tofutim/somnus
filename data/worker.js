@@ -36,13 +36,14 @@ function client_pipeRead(pBuffer, readLen)
 //  console.log(pBuffer);
   var str = pBuffer.readString();
   self.postMessage(str);
-  client.sendAsync("data");
+  client.send("data");
   client.readAsync();
 }
 
 function client_pipeClosed()
 {
-  resetClient();
+    self.postMessage('pipe closed');
+    resetClient();
 }
 
     /*

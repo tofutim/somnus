@@ -74,15 +74,19 @@ IpcClient.prototype = {
 
     // get the data etc.
     self.postMessage("  numberOfBytesTransfered " + numberOfBytesTransfered);
-    try {
-        this.pipeRead(this.readBuffer, numberOfBytesTransfered);
-    } catch (e) {
-        self.postMessage(e.toString());
+    if (numberOfBytesTransfered > 0) {
+        try {
+            this.pipeRead(this.readBuffer, numberOfBytesTransfered);
+        } catch (e) {
+            self.postMessage(e.toString());
+        }
+    } else {
+        this.pipeClosed();
     }
 
-    if (numberOfBytesTransfered > 0) {
-        this.readAsync();
-    }
+//    if (numberOfBytesTransfered > 0) {
+//        this.readAsync();
+//    }
 
     return undefined;
   },
@@ -101,12 +105,7 @@ IpcClient.prototype = {
     );
   },
   send: function(msg) {
-    let bytesWritten = ctypes.uint32_t(0);
-    // we should send bytes instead of this clean it up
-    let result = writeFile(this.pipeHandle, msg, msg.length, bytesWritten.address(), null);
-  },
-  sendAsync: function(msg) {
-      self.postMessage('calling writeAsync');
+      self.postMessage('calling write');
       ostypes.API('WriteFile')(
           this.pipeHandle,
           ctypes.char.array()((msg)),
