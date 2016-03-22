@@ -35,8 +35,9 @@ function client_pipeRead(pBuffer, readLen)
   // TODO: convert to string
 //  console.log(pBuffer);
   var str = pBuffer.readString();
-  console.log(str);
+  self.postMessage(str);
   client.sendAsync("data");
+  client.readAsync();
 }
 
 function client_pipeClosed()

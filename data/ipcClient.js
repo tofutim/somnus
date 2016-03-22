@@ -6,17 +6,31 @@ var IpcClient = function IpcClient(pipeName, pipeRead, pipeClosed) {
   this.init();
 }
 
+var MAXLEN = 1024;
+
 IpcClient.prototype = {
   init: function() {
     this.overlapped = new ostypes.TYPE.OVERLAPPED;
-    this.cReadCallback = ostypes.TYPE.LPOVERLAPPED_COMPLETION_ROUTINE(this.readCallback);
+
+    this.bytesRead = ostypes.TYPE.DWORD(0);
+    this.bytesWritten = ostypes.TYPE.DWORD(0);
+    var bufferType = ctypes.char.array(MAXLEN);
+    this.readBuffer = bufferType();
+    this.writeBuffer = bufferType();
+
+    var _this = this;
+    var jsReadCallback = function(errorCodes, numberOfBytesTransfered, pOverlapped) {
+        _this.readCallback(errorCodes, numberOfBytesTransfered, pOverlapped);
+    };
+
+    this.cReadCallback = ostypes.TYPE.LPOVERLAPPED_COMPLETION_ROUTINE(jsReadCallback);
     console.log("cReadCallback: " + this.cReadCallback);
   },
   connect: function(callback) {
     var result = false;
 
     if (typeof this.pipeHandle != 'undefined' && this.pipeHandle != ctypes.voidptr_t(0)) {
-      closeHandle(this.pipeHandle);
+      ostypes.API('CloseHandle')(this.pipeHandle);
     }
 
     let pipeMode = (ostypes.CONST.GENERIC_READ | ostypes.CONST.GENERIC_WRITE) >>> 0;
@@ -60,30 +74,28 @@ IpcClient.prototype = {
 
     // get the data etc.
     self.postMessage("  numberOfBytesTransfered " + numberOfBytesTransfered);
-    this.readAsync();       /// <----- doesn't work
+    try {
+        this.pipeRead(this.readBuffer, numberOfBytesTransfered);
+    } catch (e) {
+        self.postMessage(e.toString());
+    }
 
-//    this.pipeRead(null, numberOfBytesTransfered);
+    if (numberOfBytesTransfered > 0) {
+        this.readAsync();
+    }
 
     return undefined;
   },
 
   readAsync: function() {
-    var MAXLEN = 1024;
-
-    let bytesRead = ctypes.uint32_t(0);
-    let pBufferType = ctypes.char.array(MAXLEN);
-    let pBuffer = pBufferType();
-
-    self.postMessage('here we go');
-    console.log("starting readFileEx");
+    self.postMessage('calling readAsync');
     ostypes.API('ReadFileEx')(
       this.pipeHandle,
-      pBuffer,
+      this.readBuffer,
       MAXLEN,
       this.overlapped.address(),
       this.cReadCallback);
-    console.log("ending readFileEx");
-    ostypes.API('SleepEx')(
+    ostypes.API('SleepEx')(             // how do we interrupt this? :P
         60000,
         true
     );
@@ -94,7 +106,12 @@ IpcClient.prototype = {
     let result = writeFile(this.pipeHandle, msg, msg.length, bytesWritten.address(), null);
   },
   sendAsync: function(msg) {
-    var _this = this;
-    setTimeout(function() { _this.send(msg); }, 0);
+      self.postMessage('calling writeAsync');
+      ostypes.API('WriteFile')(
+          this.pipeHandle,
+          ctypes.char.array()((msg)),
+          msg.length,
+          this.bytesWritten.address(),
+          null);
   }
 }
