@@ -99,10 +99,20 @@ IpcClient.prototype = {
       MAXLEN,
       this.overlapped.address(),
       this.cReadCallback);
-    ostypes.API('SleepEx')(             // how do we interrupt this? :P
-        60000,
-        true
+    self.postMessage('sleepEx 10');
+    var res = ostypes.API('SleepEx')(             // how do we interrupt this? :P
+        10000,
+        ostypes.TYPE.BOOL(1)
     );
+
+    if (res == ostypes.CONST.WAIT_IO_COMPLETION) {
+        self.postMessage('IO complete');
+    } else {
+        self.postMessage('Timeout');
+    }
+
+    self.postMessage('sleepEx set' + res);
+
   },
   send: function(msg) {
       self.postMessage('calling write');
