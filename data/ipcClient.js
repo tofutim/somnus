@@ -106,23 +106,27 @@ IpcClient.prototype = {
       this.cReadCallback);
 
 
-    var timeout = 1;
-    self.postMessage('sleepEx (' + timeout + ' sec)');
-    var res = ostypes.API('SleepEx')(
-        timeout * 1000,
-        true
-    );
+    var timeout = 0.5;
+    var res = 0;
 
-    if (res != ostypes.CONST.WAIT_IO_COMPLETION) {
-        // self.postMessage('cancelling...');
-        // // cancel previous ReadFileEx, then prep for a new read
-        //ostypes.API('CancelIoEx')(this.pipeHandle, this.overlapped.address());
-        // self.postMessage('canceled');
-        var _this = this;
-        setTimeout(function() {
-            _this.readAsync();
-        }, 0);
-    }
+    do {
+//        self.postMessage('sleepEx (' + timeout + ' sec)');
+        var res = ostypes.API('SleepEx')(
+            timeout * 1000,
+            true
+        );
+    } while (res != ostypes.CONST.WAIT_IO_COMPLETION);
+
+    // if (res != ostypes.CONST.WAIT_IO_COMPLETION) {
+    //     // self.postMessage('cancelling...');
+    //     // // cancel previous ReadFileEx, then prep for a new read
+    //     //ostypes.API('CancelIoEx')(this.pipeHandle, this.overlapped.address());
+    //     // self.postMessage('canceled');
+    //     var _this = this;
+    //     setTimeout(function() {
+    //         _this.readAsync();
+    //     }, 0);
+    // }
   },
   send: function(msg) {         // TODO: Consider SendAsync
       self.postMessage("sending '" + msg + "'");
