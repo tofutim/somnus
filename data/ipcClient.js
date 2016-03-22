@@ -52,7 +52,6 @@ IpcClient.prototype = {
     return result;
   },
   readCallback: function(errorCodes, numberOfBytesTransfered, pOverlapped) {
-    self.postMessage("  numberOfBytesTransfered " + numberOfBytesTransfered);
 
     console.log("readCallback:")
     console.log("  errorCodes " + errorCodes);
@@ -60,6 +59,10 @@ IpcClient.prototype = {
     console.log("  pOverlapped " + pOverlapped);
 
     // get the data etc.
+    self.postMessage("  numberOfBytesTransfered " + numberOfBytesTransfered);
+    this.readAsync();       /// <----- doesn't work
+
+//    this.pipeRead(null, numberOfBytesTransfered);
 
     return undefined;
   },
@@ -80,6 +83,10 @@ IpcClient.prototype = {
       this.overlapped.address(),
       this.cReadCallback);
     console.log("ending readFileEx");
+    ostypes.API('SleepEx')(
+        60000,
+        true
+    );
   },
   send: function(msg) {
     let bytesWritten = ctypes.uint32_t(0);
