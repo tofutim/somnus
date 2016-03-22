@@ -17,6 +17,7 @@ IpcClient.prototype = {
     var bufferType = ctypes.char.array(MAXLEN);
     this.readBuffer = bufferType();
     this.writeBuffer = bufferType();
+    this.isTerminating = false;
 
     var _this = this;
     var jsReadCallback = function(errorCodes, numberOfBytesTransfered, pOverlapped) {
@@ -52,6 +53,7 @@ IpcClient.prototype = {
     if (ctypes.Int64.compare(pipeHandleInt.value, ctypes.Int64(ostypes.CONST.INVALID_HANDLE_VALUE)) != 0) {
       console.log('connected via ' + this.pipeHandle + '!')
       result = true;
+      this.isTerminating = false;
       setTimeout(function() {
         callback();
       },0);
@@ -66,59 +68,53 @@ IpcClient.prototype = {
     return result;
   },
   readCallback: function(errorCodes, numberOfBytesTransfered, pOverlapped) {
-
-    console.log("readCallback:")
-    console.log("  errorCodes " + errorCodes);
-    console.log("  numberOfBytesTransfered " + numberOfBytesTransfered);
-    console.log("  pOverlapped " + pOverlapped);
-
-    // get the data etc.
-    self.postMessage("  numberOfBytesTransfered " + numberOfBytesTransfered);
+    self.postMessage("received " + numberOfBytesTransfered + " bytes");
+    var _this = this;
     if (numberOfBytesTransfered > 0) {
+        setTimeout(function() {
+            _this.readAsync()
+        }, 0);
         try {
-            this.pipeRead(this.readBuffer, numberOfBytesTransfered);
+            _this.pipeRead(_this.readBuffer, numberOfBytesTransfered);
         } catch (e) {
             self.postMessage(e.toString());
         }
     } else {
-        this.pipeClosed();
+        setTimeout(function() {
+            _this.pipeClosed();
+        }, 0)
     }
-
-//    if (numberOfBytesTransfered > 0) {
-//        this.readAsync();
-//    }
 
     return undefined;
   },
 
   readAsync: function() {
-    self.postMessage('calling readAsync');
+//    self.postMessage('calling readAsync');
     ostypes.API('ReadFileEx')(
       this.pipeHandle,
       this.readBuffer,
       MAXLEN,
       this.overlapped.address(),
       this.cReadCallback);
-    self.postMessage('sleepEx 10');
-    var res = ostypes.API('SleepEx')(             // how do we interrupt this? :P
-        10000,
+
+    var timeout = .5;
+//    self.postMessage('sleepEx (' + timeout + ' sec)');
+    var res = ostypes.API('SleepEx')(
+        timeout * 1000,
         ostypes.TYPE.BOOL(1)
     );
-
-    if (res == ostypes.CONST.WAIT_IO_COMPLETION) {
-        self.postMessage('IO complete');
-    } else {
-        self.postMessage('Timeout');
+    if (res != ostypes.CONST.WAIT_IO_COMPLETION) {
+        var _this = this;
+        setTimeout(function() {
+            _this.readAsync();
+        }, 0);
     }
-
-    self.postMessage('sleepEx set' + res);
-
   },
-  send: function(msg) {
-      self.postMessage('calling write');
+  send: function(msg) {         // TODO: Consider SendAsync
+      self.postMessage("sending '" + msg + "'");
       ostypes.API('WriteFile')(
           this.pipeHandle,
-          ctypes.char.array()((msg)),
+          ctypes.char.array()(msg),
           msg.length,
           this.bytesWritten.address(),
           null);
