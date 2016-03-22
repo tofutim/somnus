@@ -19,3 +19,7 @@ setTimeout(function() {
     _worker.terminate();    /// yah this is bad
 },10000);
 */
+exports.onUnload = function (reason) {
+    worker.postMessage('shutdown');
+//    console.log('unloading reason: ' + reason);
+};

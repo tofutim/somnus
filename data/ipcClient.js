@@ -7,7 +7,7 @@ var IpcClient = function IpcClient(pipeName, pipeRead, pipeClosed) {
 }
 
 var MAXLEN = 1024;
-var SLEEPEXPERIOD = 1000;
+var SLEEPEXPERIOD = 200;
 var PIPECHECKPERIOD = 1000;
 
 IpcClient.prototype = {
@@ -19,6 +19,7 @@ IpcClient.prototype = {
     var bufferType = ctypes.char.array(MAXLEN);
     this.readBuffer = bufferType();
     this.writeBuffer = bufferType();
+    this.closing = false;
 
     var _this = this;
     var jsReadCallback = function(errorCodes, numberOfBytesTransfered, pOverlapped) {
@@ -28,13 +29,20 @@ IpcClient.prototype = {
     this.cReadCallback = ostypes.TYPE.LPOVERLAPPED_COMPLETION_ROUTINE(jsReadCallback);
     console.log("cReadCallback: " + this.cReadCallback);
   },
+  close: function() {
+      this.closing = true;
+      if (typeof this.pipeHandle != 'undefined' && this.pipeHandle != ctypes.voidptr_t(0)) {
+        // self.postMessage('cancelIo');
+//        ostypes.API('CancelIoEx')(this.pipeHandle, this.overlapped.address());
+//        self.postMessage('closeHandle');
+        ostypes.API('CloseHandle')(this.pipeHandle);
+      }
+  },
   connect: function(callback) {
     var result = false;
 
-    if (typeof this.pipeHandle != 'undefined' && this.pipeHandle != ctypes.voidptr_t(0)) {
-      ostypes.API('CloseHandle')(this.pipeHandle);
-    }
-
+    this.close();
+    this.closing = false;
     let pipeMode = (ostypes.CONST.GENERIC_READ | ostypes.CONST.GENERIC_WRITE) >>> 0;
     let pipePath = "\\\\.\\pipe\\" + this.pipeName;
 
@@ -107,7 +115,8 @@ IpcClient.prototype = {
       this.overlapped.address(),
       this.cReadCallback);
 
-
+    this.wait();
+/*
     var res = null;
     do {
 //        self.postMessage('sleepEx (' + SLEEPEXPERIOD + ' msec)');
@@ -116,7 +125,7 @@ IpcClient.prototype = {
             SLEEPEXPERIOD,
             true
         );
-    } while (res != ostypes.CONST.WAIT_IO_COMPLETION);
+    } while (res != ostypes.CONST.WAIT_IO_COMPLETION); */
   },
   send: function(msg) {         // TODO: Consider SendAsync
       self.postMessage("sending '" + msg + "'");
@@ -126,5 +135,18 @@ IpcClient.prototype = {
           msg.length,
           this.bytesWritten.address(),
           null);
+  },
+  wait: function(msg) {
+      var res = ostypes.API('WaitForSingleObjectEx')(
+          this.pipeHandle,
+          SLEEPEXPERIOD,
+          true
+      );
+      if (res != ostypes.CONST.WAIT_IO_COMPLETION && !this.isClosing) {
+          var _this = this;
+          setTimeout(function() {
+              _this.wait();
+          }, 1);
+      }
   }
 }

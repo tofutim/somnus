@@ -1,9 +1,5 @@
 self.onerror = function(msg) {
-self.postMessage('error: ' + msg);
-};
-
-self.onmessage = function(msg) {
-  self.postMessage('hello ' + msg.data);
+    self.postMessage('error: ' + msg);
 };
 
 importScripts("resource://gre/modules/workers/require.js");
@@ -16,7 +12,26 @@ var MB_OK = 0;
 var client = new IpcClient('loqu8.cigar',
   client_pipeRead,
   client_pipeClosed);
+
+self.onmessage = function(msg) {
+    if (msg.data == 'shutdown') {
+        self.postMessage('shutting down...');
+        client.close();         // cancelIo, close pipeHandle
+    } else {
+        self.postMessage('worker received: ' + msg.data);
+    }
+//    client.send(msg.data);
+    /*
+    self.postMessage('received ' + msg.data);
+    if (msg.data == 'shutdown') {
+        self.postMessage('shutting down...');
+        client.close();
+    }
+    */
+};
+
 resetClient();
+
 
 function resetClient()
 {
