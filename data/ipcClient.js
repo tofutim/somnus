@@ -17,7 +17,6 @@ IpcClient.prototype = {
     var bufferType = ctypes.char.array(MAXLEN);
     this.readBuffer = bufferType();
     this.writeBuffer = bufferType();
-    this.isTerminating = false;
 
     var _this = this;
     var jsReadCallback = function(errorCodes, numberOfBytesTransfered, pOverlapped) {
@@ -53,7 +52,6 @@ IpcClient.prototype = {
     if (ctypes.Int64.compare(pipeHandleInt.value, ctypes.Int64(ostypes.CONST.INVALID_HANDLE_VALUE)) != 0) {
       console.log('connected via ' + this.pipeHandle + '!')
       result = true;
-      this.isTerminating = false;
       setTimeout(function() {
         callback();
       },0);
@@ -69,6 +67,7 @@ IpcClient.prototype = {
   },
   readCallback: function(errorCodes, numberOfBytesTransfered, pOverlapped) {
     self.postMessage("received " + numberOfBytesTransfered + " bytes");
+    self.postMessage("errorCodes " + errorCodes);
     var _this = this;
     if (numberOfBytesTransfered > 0) {
         setTimeout(function() {
@@ -80,16 +79,25 @@ IpcClient.prototype = {
             self.postMessage(e.toString());
         }
     } else {
-        setTimeout(function() {
-            _this.pipeClosed();
-        }, 0)
+        // check if we canceled, if not we closed
+        if (errorCodes == ostypes.CONST.ERROR_BROKEN_PIPE) {
+            self.postMessage('ERROR_BROKEN_PIPE');
+            setTimeout(function() {
+                _this.pipeClosed();
+            }, 0)
+        } else if (errorCodes == ostypes.CONST.ERROR_OPERATION_ABORTED) {
+            self.postMessage('ERROR_OPERATION_ABORTED');
+            // setTimeout(function() {
+            //     _this.readAsync()
+            // }, 0);
+        }
     }
 
     return undefined;
   },
 
   readAsync: function() {
-//    self.postMessage('calling readAsync');
+    self.postMessage('calling readAsync');
     ostypes.API('ReadFileEx')(
       this.pipeHandle,
       this.readBuffer,
@@ -97,13 +105,19 @@ IpcClient.prototype = {
       this.overlapped.address(),
       this.cReadCallback);
 
-    var timeout = .5;
-//    self.postMessage('sleepEx (' + timeout + ' sec)');
+
+    var timeout = 1;
+    self.postMessage('sleepEx (' + timeout + ' sec)');
     var res = ostypes.API('SleepEx')(
         timeout * 1000,
-        ostypes.TYPE.BOOL(1)
+        true
     );
+
     if (res != ostypes.CONST.WAIT_IO_COMPLETION) {
+        // self.postMessage('cancelling...');
+        // // cancel previous ReadFileEx, then prep for a new read
+        //ostypes.API('CancelIoEx')(this.pipeHandle, this.overlapped.address());
+        // self.postMessage('canceled');
         var _this = this;
         setTimeout(function() {
             _this.readAsync();
